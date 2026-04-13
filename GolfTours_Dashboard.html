@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GolfTours.com — US West Coast Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #F4F6F7; color: #1A1A1A; font-size: 13px; }
+  .topbar { background: #1A5276; color: white; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 16px; font-weight: 700; }
+  .topbar p  { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+  .topbar-right { text-align: right; font-size: 11px; opacity: 0.8; }
+  .badge { background: #27AE60; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-left: 8px; }
+  .badge.loading { background: #E67E22; }
+  .badge.error   { background: #C0392B; }
+  .dash { padding: 16px 24px; max-width: 1400px; margin: 0 auto; }
+  .section-head { font-size: 10px; font-weight: 700; color: #1A5276; text-transform: uppercase; letter-spacing: 0.06em; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #1A5276; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px; }
+  .metrics-8 { grid-template-columns: repeat(4, 1fr); }
+  @media(min-width:1100px) { .metrics-8 { grid-template-columns: repeat(8, 1fr); } }
+  .metric { background: white; border-radius: 8px; padding: 12px 14px; border: 0.5px solid #D5D8DC; }
+  .metric .lbl { font-size: 10px; color: #777; margin-bottom: 4px; line-height: 1.3; }
+  .metric .val { font-size: 22px; font-weight: 700; line-height: 1; }
+  .metric .sub { font-size: 10px; color: #999; margin-top: 3px; }
+  .val-navy   { color: #1A5276; }
+  .val-green  { color: #1E8449; }
+  .val-amber  { color: #854F0B; }
+  .val-coral  { color: #993C1D; }
+  .val-purple { color: #534AB7; }
+  .val-red    { color: #C0392B; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .card { background: white; border-radius: 8px; border: 0.5px solid #D5D8DC; padding: 14px 16px; }
+  .card h3 { font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+  .row-item { display: flex; align-items: flex-start; justify-content: space-between; padding: 7px 0; border-bottom: 0.5px solid #EBEBEB; }
+  .row-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .row-name { font-weight: 700; font-size: 12px; color: #1A1A1A; }
+  .row-meta { font-size: 11px; color: #888; margin-top: 1px; }
+  .row-right { text-align: right; }
+  .row-val  { font-weight: 700; font-size: 12px; }
+  .pill { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; margin-top: 2px; font-weight: 600; }
+  .pill-new    { background: #EAF2F8; color: #1A5276; }
+  .pill-qual   { background: #EAF3DE; color: #3B6D11; }
+  .pill-build  { background: #E8DAEF; color: #4A235A; }
+  .pill-prop   { background: #FAEEDA; color: #854F0B; }
+  .pill-neg    { background: #FBEAF0; color: #993556; }
+  .pill-conf   { background: #EAF3DE; color: #1E8449; }
+  .pill-stall  { background: #FADBD8; color: #C0392B; }
+  .t1 { background: #EAF2F8; color: #1A5276; }
+  .t2 { background: #EAF3DE; color: #3B6D11; }
+  .t3 { background: #F4F6F7; color: #777; }
+  .bar-wrap { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .bar-label { font-size: 11px; min-width: 70px; color: #1A1A1A; }
+  .bar-track { flex: 1; background: #EEF0F2; border-radius: 3px; height: 7px; overflow: hidden; }
+  .bar-fill  { height: 100%; border-radius: 3px; }
+  .bar-pct   { font-size: 11px; color: #888; min-width: 30px; text-align: right; }
+  .stars { color: #BA7517; letter-spacing: 1px; }
+  .stage-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 6px; }
+  .stage-box { background: #F4F4FA; border-radius: 6px; padding: 8px 6px; text-align: center; }
+  .stage-box .s-count { font-size: 18px; font-weight: 700; color: #534AB7; }
+  .stage-box .s-val   { font-size: 10px; color: #888; margin-top: 1px; }
+  .stage-box .s-lbl   { font-size: 9px; color: #534AB7; margin-top: 3px; font-weight: 600; }
+  .loader { text-align: center; padding: 60px; color: #888; font-size: 14px; }
+  .error-msg { background: #FADBD8; border: 1px solid #E74C3C; border-radius: 8px; padding: 16px; margin: 16px 0; color: #C0392B; font-size: 12px; }
+  .config-box { background: #EAF2F8; border: 1px solid #2E86C1; border-radius: 8px; padding: 16px; margin: 16px 0; }
+  .config-box h3 { color: #1A5276; font-size: 13px; margin-bottom: 8px; }
+  .config-box input { width: 100%; padding: 8px 10px; border: 1px solid #AED6F1; border-radius: 6px; font-size: 12px; margin-top: 4px; }
+  .config-box button { margin-top: 8px; padding: 8px 16px; background: #1A5276; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 700; }
+  .config-box button:hover { background: #2E86C1; }
+  .demo-note { background: #FAEEDA; border-left: 3px solid #854F0B; padding: 8px 12px; font-size: 11px; color: #854F0B; margin-bottom: 12px; border-radius: 0 6px 6px 0; }
+  .footer { font-size: 10px; color: #AAA; text-align: center; padding: 16px; border-top: 0.5px solid #EEE; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>GolfTours.com &mdash; US West Coast <span class="badge loading" id="status-badge">Connecting...</span></h1>
+    <p>Sean Mulrooney &nbsp;&middot;&nbsp; West Coast Sales &amp; Supplier Relations &nbsp;&middot;&nbsp; London HQ Read-Only View</p>
+  </div>
+  <div class="topbar-right">
+    <div id="last-updated">Fetching data...</div>
+    <div style="margin-top:4px;">Data live from Google Sheets CRM</div>
+  </div>
+</div>
+
+<div class="dash">
+
+  <div class="config-box" id="config-panel">
+    <h3>Connect to Live Google Sheets Data</h3>
+    <p style="font-size:11px;color:#555;margin-bottom:6px;">Paste your Apps Script Web App deployment URL below. Once connected, this dashboard pulls live from your CRM every time it loads.</p>
+    <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec" />
+    <br>
+    <button onclick="saveAndConnect()">Connect &amp; Load Live Data</button>
+    <button onclick="loadDemo()" style="background:#777;margin-left:8px;">Load Demo Data Instead</button>
+  </div>
+
+  <div id="main-content" style="display:none;">
+
+    <div class="demo-note" id="demo-note" style="display:none;">
+      Showing demo data. Connect your Google Sheet above to see live CRM figures.
+    </div>
+
+    <div class="section-head">A &nbsp; Pipeline Health</div>
+    <div class="metrics metrics-8" id="pipeline-metrics"></div>
+
+    <div style="margin-top:12px;" class="card">
+      <h3>Pipeline by Stage</h3>
+      <div class="stage-grid" id="stage-grid"></div>
+    </div>
+
+    <div class="section-head" style="margin-top:16px;">Active Deals</div>
+    <div class="card"><div id="deals-list"></div></div>
+
+    <div class="section-head" style="margin-top:16px;">B &nbsp; Bookings &amp; Revenue</div>
+    <div class="metrics metrics-8" id="revenue-metrics"></div>
+    <div style="margin-top:10px;" class="card">
+      <h3>Confirmed Bookings</h3>
+      <div id="bookings-list"></div>
+    </div>
+
+    <div class="section-head" style="margin-top:16px;">C &nbsp; Supplier Activity</div>
+    <div class="grid2">
+      <div class="metrics" style="grid-template-columns:repeat(3,1fr);gap:10px;" id="supplier-metrics"></div>
+      <div class="card"><h3>Supplier Directory</h3><div id="supplier-list"></div></div>
+    </div>
+
+    <div class="section-head" style="margin-top:4px;">D &nbsp; Post-Trip Feedback</div>
+    <div class="grid2">
+      <div>
+        <div class="metrics" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;" id="feedback-metrics"></div>
+        <div class="card"><h3>Lead Source Breakdown</h3><div id="source-chart"></div></div>
+      </div>
+      <div class="card"><h3>Recent Feedback</h3><div id="feedback-list"></div></div>
+    </div>
+
+  </div>
+
+  <div class="loader" id="loader" style="display:none;">Loading live data from Google Sheets...</div>
+  <div id="error-area"></div>
+
+</div>
+
+<div class="footer" id="footer-note"></div>
+
+<script>
+const STAGE_PILLS = {
+  "1. New Enquiry":      ["New enquiry",  "pill-new"],
+  "2. Qualification":    ["Qualification","pill-qual"],
+  "3. Itinerary Build":  ["Building",     "pill-build"],
+  "4. Proposal Sent":    ["Proposal sent","pill-prop"],
+  "5. Negotiation":      ["Negotiation",  "pill-neg"],
+  "6. Booking Confirmed":["Confirmed",    "pill-conf"],
+};
+
+function fmt(n)   { return "$" + Math.round(n).toLocaleString(); }
+function fmtK(n)  { return "$" + (Math.round(n/1000)) + "k"; }
+function fmtPct(n){ return (Math.round(n*1000)/10).toFixed(1) + "%"; }
+function stars(n) { return "★".repeat(n) + "☆".repeat(5-n); }
+
+function saveAndConnect() {
+  const url = document.getElementById("api-url").value.trim();
+  if (!url.startsWith("https://script.google.com")) {
+    alert("Please enter a valid Google Apps Script URL.");
+    return;
+  }
+  localStorage.setItem("golftours_api_url", url);
+  fetchLiveData(url);
+}
+
+function loadDemo() {
+  document.getElementById("demo-note").style.display = "block";
+  renderAll(getDemoData());
+  document.getElementById("config-panel").style.display = "none";
+}
+
+async function fetchLiveData(url) {
+  document.getElementById("loader").style.display = "block";
+  document.getElementById("main-content").style.display = "none";
+  document.getElementById("error-area").innerHTML = "";
+
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+    document.getElementById("config-panel").style.display = "none";
+    renderAll(data);
+    document.getElementById("status-badge").textContent = "Live";
+    document.getElementById("status-badge").className   = "badge";
+    const ts = new Date(data.generated);
+    document.getElementById("last-updated").textContent =
+      "Last updated: " + ts.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+  } catch(e) {
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("status-badge").textContent = "Error";
+    document.getElementById("status-badge").className   = "badge error";
+    document.getElementById("error-area").innerHTML =
+      `<div class="error-msg"><strong>Could not connect to Google Sheet.</strong><br>
+      Check that your Apps Script is deployed as a Web App with access set to "Anyone".<br>
+      Error: ${e.message}</div>`;
+  }
+}
+
+function renderAll(d) {
+  document.getElementById("loader").style.display       = "none";
+  document.getElementById("main-content").style.display = "block";
+
+  const p = d.pipeline;
+  const r = d.revenue;
+  const s = d.suppliers;
+  const f = d.feedback;
+  const c = d.contacts;
+
+  // ── Pipeline metrics ──
+  document.getElementById("pipeline-metrics").innerHTML = [
+    {l:"New enquiries<br>this week",       v: p.newEnquiries,              cls:"val-navy"},
+    {l:"Open deals",                       v: p.openDeals,                 cls:"val-navy"},
+    {l:"Hot leads",                        v: p.hotLeads,                  cls:"val-coral"},
+    {l:"Warm leads",                       v: p.warmLeads,                 cls:"val-amber"},
+    {l:"Deals stalled<br>(7+ days)",       v: p.stalledDeals,              cls:"val-red"},
+    {l:"Proposals<br>outstanding",         v: p.byStage["4. Proposal Sent"]?.count||0, cls:"val-amber"},
+    {l:"Avg deal value",                   v: fmtK(p.pipelineValue/(p.openDeals||1)), cls:"val-green"},
+    {l:"Total pipeline value",             v: fmtK(p.pipelineValue),       cls:"val-green"},
+  ].map(m => `<div class="metric"><div class="lbl">${m.l}</div><div class="val ${m.cls}">${m.v}</div></div>`).join("");
+
+  // ── Stage grid ──
+  const stageKeys = Object.keys(p.byStage);
+  document.getElementById("stage-grid").innerHTML = stageKeys.map(k => {
+    const st = p.byStage[k];
+    const lbl = k.replace(/^\d+\. /,"");
+    return `<div class="stage-box">
+      <div class="s-count">${st.count}</div>
+      <div class="s-val">${st.value > 0 ? fmtK(st.value) : "—"}</div>
+      <div class="s-lbl">${lbl}</div>
+    </div>`;
+  }).join("");
+
+  // ── Active deals ──
+  document.getElementById("deals-list").innerHTML = p.activeDeals.map(deal => {
+    const [label, cls] = STAGE_PILLS[deal.stage] || ["Unknown","pill-new"];
+    const flag = deal.flag === "STALLED"
+      ? `<span class="pill pill-stall" style="margin-left:4px;">Stalled</span>` : "";
+    return `<div class="row-item">
+      <div>
+        <div class="row-name">${deal.name || deal.client}</div>
+        <div class="row-meta">${deal.type} &middot; ${deal.region}</div>
+      </div>
+      <div class="row-right">
+        <div class="row-val val-navy">${fmt(deal.value)}</div>
+        <span class="pill ${cls}">${label}</span>${flag}
+      </div>
+    </div>`;
+  }).join("") || "<div style='color:#999;font-size:12px;padding:8px 0;'>No active deals — add data to the CRM.</div>";
+
+  // ── Revenue metrics ──
+  document.getElementById("revenue-metrics").innerHTML = [
+    {l:"Bookings confirmed",        v: r.confirmedCount,          cls:"val-green"},
+    {l:"Total confirmed revenue",   v: fmtK(r.totalRevenue),      cls:"val-green"},
+    {l:"Avg booking value",         v: fmtK(r.avgBookingValue),   cls:"val-green"},
+    {l:"Overall margin",            v: fmtPct(r.overallMargin),   cls:"val-navy"},
+    {l:"Deposits received",         v: fmtK(r.totalDeposits),     cls:"val-navy"},
+    {l:"Balance outstanding",       v: fmtK(r.totalBalance),      cls:"val-amber"},
+    {l:"Departing next 7 days",     v: r.departingNext7,          cls: r.departingNext7 > 0 ? "val-coral" : "val-navy"},
+    {l:"Repeat outreach due",       v: r.outreachDueThisWeek,     cls:"val-amber"},
+  ].map(m => `<div class="metric"><div class="lbl">${m.l}</div><div class="val ${m.cls}">${m.v}</div></div>`).join("");
+
+  // ── Bookings list ──
+  document.getElementById("bookings-list").innerHTML = r.recentBookings.map(b =>
+    `<div class="row-item">
+      <div>
+        <div class="row-name">${b.client}</div>
+        <div class="row-meta">${b.trip}</div>
+      </div>
+      <div class="row-right">
+        <div class="row-val val-green">${fmt(b.value)}</div>
+        <div style="font-size:10px;color:#1E8449;margin-top:2px;">Margin: ${fmtPct(b.margin)}</div>
+      </div>
+    </div>`
+  ).join("") || "<div style='color:#999;font-size:12px;padding:8px 0;'>No confirmed bookings yet.</div>";
+
+  // ── Supplier metrics ──
+  document.getElementById("supplier-metrics").innerHTML = [
+    {l:"Total suppliers",   v: s.totalSuppliers, cls:"val-amber"},
+    {l:"Tier 1 partners",   v: s.tier1Count,     cls:"val-navy"},
+    {l:"Outreach due",      v: s.outreachDue,    cls: s.outreachDue > 0 ? "val-red" : "val-green"},
+    {l:"Tier 2 preferred",  v: s.tier2Count,     cls:"val-amber"},
+    {l:"Tier 3 listed",     v: s.tier3Count,     cls:"val-amber"},
+    {l:"Marriott Bonvoy",   v: s.bonvoyCount,    cls:"val-navy"},
+  ].map(m => `<div class="metric"><div class="lbl">${m.l}</div><div class="val ${m.cls}">${m.v}</div></div>`).join("");
+
+  // ── Supplier list ──
+  document.getElementById("supplier-list").innerHTML = s.supplierList.slice(0,8).map(sup =>
+    `<div class="row-item">
+      <div>
+        <div class="row-name">${sup.name}
+          <span class="pill t${sup.tier}" style="margin-left:4px;">T${sup.tier}</span>
+          ${sup.bonvoy ? `<span class="pill" style="background:#EAF2F8;color:#1A5276;margin-left:4px;">Bonvoy</span>` : ""}
+        </div>
+        <div class="row-meta">${sup.region} &middot; Last contact: ${sup.lastContact}</div>
+      </div>
+      <div class="row-right">
+        <span class="pill ${sup.action === "OUTREACH DUE" ? "pill-stall" : "pill-qual"}">${sup.action}</span>
+      </div>
+    </div>`
+  ).join("");
+
+  // ── Feedback metrics ──
+  document.getElementById("feedback-metrics").innerHTML = [
+    {l:"Trips completed",      v: f.totalFeedback,  cls:"val-coral"},
+    {l:"5-star ratings",       v: f.fiveStar,       cls:"val-green"},
+    {l:"Issues flagged",       v: f.issuesFlagged,  cls: f.issuesFlagged > 0 ? "val-red" : "val-green"},
+    {l:"Avg rating",           v: (Math.round(f.avgRating*10)/10).toFixed(1), cls:"val-amber"},
+    {l:"Testimonials",         v: f.testimonialsRec,cls:"val-navy"},
+    {l:"Referral leads",       v: f.referralOpps,   cls:"val-green"},
+  ].map(m => `<div class="metric"><div class="lbl">${m.l}</div><div class="val ${m.cls}">${m.v}</div></div>`).join("");
+
+  // ── Source chart ──
+  const src = c.sourceBreakdown;
+  const maxSrc = Math.max(...Object.values(src), 1);
+  const COLORS = { Email:"#1A5276", Phone:"#1E8449", "Live Chat":"#854F0B",
+                   Referral:"#993556", Website:"#534AB7", "Trade Show":"#993C1D", Other:"#888" };
+  document.getElementById("source-chart").innerHTML = Object.entries(src).map(([k,v]) =>
+    `<div class="bar-wrap">
+      <span class="bar-label">${k}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/maxSrc*100)}%;background:${COLORS[k]||"#888"};"></div></div>
+      <span class="bar-pct">${v}</span>
+    </div>`
+  ).join("");
+
+  // ── Recent feedback ──
+  document.getElementById("feedback-list").innerHTML = f.recentFeedback.map(fb =>
+    `<div class="row-item" style="flex-direction:column;align-items:flex-start;">
+      <div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;">
+        <span class="row-name">${fb.client}</span>
+        <span class="stars">${stars(fb.rating)}</span>
+      </div>
+      <div class="row-meta" style="font-size:11px;color:#555;">${fb.trip}</div>
+      <div style="font-size:11px;color:#444;margin-top:4px;line-height:1.5;">${fb.text}</div>
+    </div>`
+  ).join("") || "<div style='color:#999;font-size:12px;padding:8px 0;'>No feedback recorded yet.</div>";
+
+  document.getElementById("footer-note").textContent =
+    `GolfTours.com US West Coast CRM Dashboard  |  Sean Mulrooney  |  619-647-1595  |  seanpmulrooney@gmail.com  |  Data refreshes on page load`;
+}
+
+function getDemoData() {
+  return {
+    generated: new Date().toISOString(),
+    pipeline: {
+      newEnquiries: 7, openDeals: 16, hotLeads: 4, warmLeads: 6,
+      stalledDeals: 2, pipelineValue: 142000,
+      byStage: {
+        "1. New Enquiry":      {count:3, value:22000},
+        "2. Qualification":    {count:4, value:48000},
+        "3. Itinerary Build":  {count:3, value:31000},
+        "4. Proposal Sent":    {count:3, value:28000},
+        "5. Negotiation":      {count:2, value:13000},
+        "6. Booking Confirmed":{count:1, value:0},
+      },
+      activeDeals: [
+        {name:"The Robertson Group", client:"Robertson Group", type:"Corporate", region:"San Diego + Scottsdale", value:24800, stage:"4. Proposal Sent", flag:""},
+        {name:"Calloway Exec Retreat", client:"Calloway", type:"Corporate", region:"Palm Springs", value:41500, stage:"2. Qualification", flag:""},
+        {name:"James & Helen Whitfield", client:"Whitfield", type:"Couple", region:"Pebble Beach", value:9200, stage:"5. Negotiation", flag:""},
+        {name:"Donnelly Party (8)", client:"Donnelly", type:"Small Group (3-8)", region:"Napa + Pebble", value:18400, stage:"1. New Enquiry", flag:""},
+        {name:"Pacific Rim Capital", client:"Pacific Rim", type:"Corporate", region:"San Diego + Palm Springs", value:52000, stage:"2. Qualification", flag:"STALLED"},
+      ],
+    },
+    revenue: {
+      confirmedCount: 8, totalRevenue: 142600, avgBookingValue: 17825,
+      overallMargin: 0.21, totalDeposits: 68000, totalBalance: 74600,
+      departingNext7: 2, outreachDueThisWeek: 3,
+      recentBookings: [
+        {client:"Thornton Golf Society", trip:"6 players — Aviara, Apr 19-21", value:14200, margin:0.22},
+        {client:"David & Claire Marsh", trip:"2 pax — Lodge at Torrey Pines, Apr 24-26", value:7600, margin:0.19},
+        {client:"FWD Leadership Group", trip:"12 pax — La Quinta/PGA West, Apr 28 - May 2", value:38400, margin:0.21},
+        {client:"The Harper Group", trip:"8 pax — Desert Willow + JW Marriott, May 8-12", value:29800, margin:0.20},
+      ],
+    },
+    suppliers: {
+      totalSuppliers:15, tier1Count:6, tier2Count:6, tier3Count:3,
+      outreachDue:2, bonvoyCount:6,
+      supplierList: [
+        {name:"Aviara / Omni La Costa", tier:"1", region:"San Diego", action:"OK", bonvoy:true, lastContact:"Apr 10"},
+        {name:"Lodge at Torrey Pines", tier:"1", region:"San Diego", action:"OK", bonvoy:false, lastContact:"Apr 8"},
+        {name:"La Quinta / PGA West", tier:"1", region:"Palm Springs", action:"OK", bonvoy:false, lastContact:"Apr 10"},
+        {name:"JW Marriott Desert Springs", tier:"1", region:"Palm Springs", action:"OK", bonvoy:true, lastContact:"Apr 6"},
+        {name:"Westin Rancho Mirage", tier:"2", region:"Palm Springs", action:"OUTREACH DUE", bonvoy:true, lastContact:"Jan 15"},
+        {name:"Silverado Resort, Napa", tier:"2", region:"Napa", action:"OK", bonvoy:true, lastContact:"Mar 28"},
+        {name:"The Lodge at Pebble Beach", tier:"1", region:"Monterey", action:"OK", bonvoy:false, lastContact:"Apr 3"},
+        {name:"CordeValle", tier:"3", region:"Santa Cruz", action:"OUTREACH DUE", bonvoy:false, lastContact:"Dec 10"},
+      ],
+    },
+    feedback: {
+      totalFeedback:12, fiveStar:9, fourStar:2, issuesFlagged:1,
+      testimonialsRec:7, referralOpps:9, avgRating:4.7,
+      recentFeedback: [
+        {client:"James Calloway (SD Weekend, Apr 5)", trip:"Torrey Pines + Lodge", rating:5, text:"Seamless from first call to checkout. Torrey Pines exceeded every expectation."},
+        {client:"Harper Group (Palm Springs, Mar 28)", trip:"Desert Willow + JW Marriott", rating:5, text:"Rene at Aviara was fantastic. Second trip already in the works."},
+        {client:"Sarah & Tom Birch (Pebble Beach, Mar 22)", trip:"Pebble Beach + Spanish Bay", rating:4, text:"Outstanding courses. Transfer from SFO could be smoother next time."},
+      ],
+    },
+    contacts: {
+      totalContacts:47, staleContacts:6,
+      sourceBreakdown: {Email:18, Phone:13, "Live Chat":8, Referral:5, Website:2, "Trade Show":1, Other:0},
+    },
+  };
+}
+
+// Auto-connect if URL was previously saved
+window.addEventListener("load", () => {
+  const saved = localStorage.getItem("golftours_api_url");
+  if (saved) {
+    document.getElementById("api-url").value = saved;
+    fetchLiveData(saved);
+  }
+});
+</script>
+</body>
+</html>
